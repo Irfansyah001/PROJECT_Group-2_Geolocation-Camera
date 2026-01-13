@@ -4,7 +4,6 @@ const app = express(); // Buat aplikasi express
 const port = 3001; // Tentukan port server
 const morgan = require('morgan'); // Import morgan untuk logging request
 const path = require('path'); // Import path untuk manipulasi path file
-const iotRoutes = require('./routes/iot'); // Import routes IoT
 
 const presensiRoutes = require('./routes/presensi'); // Import routes presensi
 const reportRoutes = require('./routes/reports'); // Import routes laporan
@@ -33,7 +32,6 @@ app.get('/', (req, res) => { // Route dasar
 app.use('/api/presensi', presensiRoutes); // Gunakan routes presensi
 app.use('/api/reports', reportRoutes); // Gunakan routes laporan
 app.use('/api/auth', authRoutes); // Gunakan routes autentikasi
-app.use('/api/iot', iotRoutes); // Gunakan routes IoT
 
 app.listen(port, '0.0.0.0', () => { 
   console.log(`Express server running on port ${port}`);
