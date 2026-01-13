@@ -1,5 +1,5 @@
 const { User } = require('../models');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs'); // Untuk hashing password
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = 'INI_ADALAH_KUNCI_RAHASIA_ANDA_YANG_SANGAT_AMAN';
 
