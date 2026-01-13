@@ -1,8 +1,8 @@
 {
   "development": {
     "username": "root",
-    "password": "1234567",
-    "database": "praktikum_20230140223_db",
+    "password": "1234ag56",
+    "database": "praktikum_20230140244_db",
     "host": "127.0.0.1",
     "dialect": "mysql",
     "port": 3307
