@@ -5,7 +5,7 @@ const port = 3001; // Tentukan port server
 const morgan = require('morgan'); // Import morgan untuk logging request
 const path = require('path'); // Import path untuk manipulasi path file
 
-const presensiRoutes = require('./routes/presensi'); // Import routes presensi
+const presensiRoutes = require('./routes/presensi'); 
 const reportRoutes = require('./routes/reports'); // Import routes laporan
 
 const authRoutes = require('./routes/auth'); // Import routes autentikasi
