@@ -1,217 +1,332 @@
-# **Tugas Praktikum PAW – RESTful API Presensi & Report dengan Express.js**
+# **GeoProof – Location-Verified Attendance System**
 
-**Kelompok 2**
+**Kelompok 2**  
 **Kelas:** TI-5E (PAW – E-PPAW-TI503P-2025)
 
 ---
 
-## **Deskripsi Proyek**
+## **📋 Deskripsi Proyek**
 
-Tugas ini merupakan lanjutan dari praktikum **Pengembangan Aplikasi Web (PAW)** yang berfokus pada:
+GeoProof adalah sistem presensi berbasis lokasi dan selfie yang memvalidasi kehadiran menggunakan:
 
-* Implementasi **routing** dan **middleware** di Express.js
-* Pembuatan **RESTful API** sederhana untuk fitur **Presensi Karyawan**
-* Simulasi **role-based access (admin vs karyawan)** menggunakan middleware
-* Penambahan **logging, error handling**, dan struktur aplikasi modular
+- **Geofence** – Area virtual berbentuk lingkaran yang menentukan lokasi valid untuk presensi
+- **Haversine Distance** – Perhitungan jarak akurat antara posisi user dan pusat geofence
+- **Selfie Verification** – Foto bukti kehadiran yang tersimpan di server
+- **GPS Accuracy Gate** – Validasi akurasi GPS untuk mencegah spoofing
 
-Aplikasi ini menjalankan dua fitur utama:
+### **Fitur Utama**
 
-1. **Presensi Karyawan** (Check-In & Check-Out)
-2. **Laporan Harian (Report)** — hanya dapat diakses oleh **admin**
-
----
-
-## **Langkah Menjalankan Proyek**
-
-1. Buka terminal di folder:
-
-   ```bash
-   cd 20230140223-node-server
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install express cors morgan date-fns-tz
-   ```
-
-3. Jalankan server:
-
-   ```bash
-   node server.js
-   ```
-
-4. Akses API di browser atau Postman:
-
-   ```
-   http://localhost:3001/
-   ```
+| Fitur | Deskripsi |
+|-------|-----------|
+| 📍 **Geofence Management** | Admin dapat membuat, mengubah, dan mengaktifkan geofence |
+| ✅ **Check-In dengan Validasi** | Sistem otomatis menghitung jarak dan status (VALID/INVALID/PENDING) |
+| 📸 **Selfie Evidence** | Foto selfie wajib sebagai bukti kehadiran |
+| 📊 **Audit Trail** | Semua data tersimpan: koordinat, jarak, akurasi, timestamp |
+| 🔐 **Admin Verification** | Admin dapat verify/reject presensi yang pending |
+| 🛡️ **Security Hardening** | Rate limiting, CORS strict, Helmet headers |
 
 ---
 
-## **Daftar Endpoint API**
+## **🚀 Cara Menjalankan Proyek**
 
-### **Presensi (Karyawan)**
+### **Prasyarat**
 
-| HTTP Method | Endpoint                  | Deskripsi                         | Body (JSON) |
-| ----------- | ------------------------- | --------------------------------- | ----------- |
-| **POST**    | `/api/presensi/check-in`  | Menandai waktu masuk (check-in)   | –           |
-| **POST**    | `/api/presensi/check-out` | Menandai waktu keluar (check-out) | –           |
+- Node.js v18+ 
+- MySQL/MariaDB
+- npm atau yarn
 
-**Contoh Respons – Check-In**
-
-```json
-{
-  "message": "Halo User Karyawan, check-in Anda berhasil pada pukul 08:05:00 WIB",
-  "data": {
-    "userId": 123,
-    "nama": "User Karyawan",
-    "checkIn": "2025-10-21 08:05:00",
-    "checkOut": null
-  }
-}
-```
-
-**Contoh Respons – Check-Out**
-
-```json
-{
-  "message": "Selamat jalan User Karyawan, check-out Anda berhasil pada pukul 17:01:00 WIB",
-  "data": {
-    "userId": 123,
-    "nama": "User Karyawan",
-    "checkIn": "2025-10-21 08:05:00+07:00",
-    "checkOut": "2025-10-21 17:01:00+07:00"
-  }
-}
-```
-
----
-
-### **Laporan (Admin)**
-
-| HTTP Method | Endpoint             | Deskripsi                           | Hak Akses      |
-| ----------- | -------------------- | ----------------------------------- | -------------- |
-| **GET**     | `/api/reports/daily` | Mendapatkan laporan harian presensi | **Admin Only** |
-
-**Contoh Respons**
-
-```json
-{
-  "status": "success",
-  "message": "Laporan harian berhasil diambil",
-  "reportDate": "Selasa, 21 Oktober 2025 19.35",
-  "totalRecords": 2,
-  "data": [
-    {
-      "userId": 123,
-      "nama": "User Karyawan",
-      "checkIn": "2025-10-21T08:05:00.000Z",
-      "checkOut": "2025-10-21T17:01:00.000Z"
-    }
-  ]
-}
-```
-
----
-
-## **Middleware yang Digunakan**
-
-### **1. `cors`**
-
-```js
-app.use(cors());
-```
-
-→ Mengizinkan API diakses dari domain lain (misalnya frontend React).
-
-### **2. `express.json()`**
-
-```js
-app.use(express.json());
-```
-
-→ Memungkinkan server membaca body berformat JSON.
-
-### **3. `morgan('dev')`**
-
-```js
-app.use(morgan('dev'));
-```
-
-→ Mencatat aktivitas request otomatis ke console.
-
-### **4. Logging Custom**
-
-```js
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
-```
-
-→ Menampilkan waktu, method, dan URL setiap request secara manual.
-
-### **5. `permisionMiddleware.js`**
-
-```js
-exports.addUserData = (req, res, next) => { ... }
-exports.isAdmin = (req, res, next) => { ... }
-```
-
-→ Menyediakan **user dummy** dan memeriksa **role** sebelum akses endpoint.
-
----
-
-## **Error Handling**
-
-### **404 – Not Found**
-
-```js
-app.use((req, res) => {
-  res.status(404).json({ message: 'Endpoint Not Found' });
-});
-```
-
-### **Global Error Handler**
-
-```js
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Internal Server Error' });
-});
-```
-
----
-
-## **Fitur Utama**
-
-* Presensi Check-In & Check-Out
-* Report Harian hanya untuk Admin
-* Middleware Role-Based Access
-* Logging Otomatis & Manual
-* Format Waktu WIB dengan `date-fns-tz`
-* Struktur Modular (Controllers, Routes, Middleware)
-
----
-
-## **Commit Log**
+### **1. Clone Repository**
 
 ```bash
-git add .
-git commit -m "Add RESTful API Presensi & Report dengan Middleware, Logging, dan Error Handling"
-git push origin main
+git clone <repository-url>
+cd PROJECT_Group-2_Geolocation-Camera
+```
+
+### **2. Setup Backend**
+
+```bash
+cd node-server
+
+# Install dependencies
+npm install
+
+# Copy dan edit file environment
+cp .env.example .env
+# Edit .env dengan kredensial database Anda
+
+# Jalankan migrasi database
+npx sequelize-cli db:migrate
+
+# Jalankan server
+npm start
+```
+
+Server berjalan di `http://localhost:3001`
+
+### **3. Setup Frontend**
+
+```bash
+cd react
+
+# Install dependencies
+npm install
+
+# Copy dan edit file environment
+cp .env.example .env
+
+# Jalankan development server
+npm start
+```
+
+Aplikasi berjalan di `http://localhost:3000`
+
+---
+
+## **⚙️ Konfigurasi Environment**
+
+### **Backend (.env)**
+
+```env
+# Server
+PORT=3001
+NODE_ENV=development
+
+# Database
+DB_HOST=localhost
+DB_PORT=3307
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=praktikum_20230140223_db
+
+# JWT
+JWT_SECRET=your-super-secure-secret-key-min-32-chars
+
+# CORS
+FRONTEND_ORIGIN=http://localhost:3000
+
+# GPS Validation
+MAX_GPS_ACCURACY_M=100
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX=100
+SUBMIT_LIMIT_WINDOW_MS=60000
+SUBMIT_LIMIT_MAX=5
+```
+
+### **Frontend (.env)**
+
+```env
+REACT_APP_API_BASE_URL=http://localhost:3001
 ```
 
 ---
 
-## **🏫 Catatan Akhir**
+## **📡 Daftar Endpoint API**
 
-Proyek ini merupakan bagian dari praktikum **Pengembangan Aplikasi Web (PAW)**
-pada **Universitas Muhammadiyah Yogyakarta**
-dengan fokus pada pemahaman:
+### **Authentication**
 
-> **Routing – Middleware – Error Handling – RESTful API Development menggunakan Express.js**
+| Method | Endpoint | Deskripsi | Auth |
+|--------|----------|-----------|------|
+| POST | `/api/auth/register` | Daftar user baru | ❌ |
+| POST | `/api/auth/login` | Login dan dapatkan token | ✅ |
+
+### **Presensi**
+
+| Method | Endpoint | Deskripsi | Auth |
+|--------|----------|-----------|------|
+| POST | `/api/presensi/check-in` | Check-in dengan lokasi + selfie | ✅ |
+| POST | `/api/presensi/check-out` | Check-out | ✅ |
+| GET | `/api/presensi/history` | Riwayat presensi user | ✅ |
+| GET | `/api/presensi/:id` | Detail presensi spesifik | ✅ |
+| GET | `/api/presensi/admin/all` | Semua presensi (admin) | 🔒 Admin |
+| PATCH | `/api/presensi/:id/verify` | Verifikasi presensi (admin) | 🔒 Admin |
+
+### **Geofence**
+
+| Method | Endpoint | Deskripsi | Auth |
+|--------|----------|-----------|------|
+| GET | `/api/geofences/active` | Geofence aktif saat ini | ✅ |
+| GET | `/api/geofences` | Semua geofence | 🔒 Admin |
+| GET | `/api/geofences/:id` | Detail geofence | 🔒 Admin |
+| POST | `/api/geofences` | Buat geofence baru | 🔒 Admin |
+| PUT | `/api/geofences/:id` | Update geofence | 🔒 Admin |
+| PATCH | `/api/geofences/:id/activate` | Aktifkan geofence | 🔒 Admin |
+| DELETE | `/api/geofences/:id` | Hapus geofence | 🔒 Admin |
+
+### **Reports**
+
+| Method | Endpoint | Deskripsi | Auth |
+|--------|----------|-----------|------|
+| GET | `/api/reports/daily` | Laporan harian | 🔒 Admin |
 
 ---
+
+## **🗄️ Struktur Database**
+
+### **Users**
+```
+- id, email, password, nama, role (admin/karyawan)
+- createdAt, updatedAt
+```
+
+### **Geofences**
+```
+- id, name, description
+- centerLat, centerLng, radiusM
+- isActive, createdBy
+- createdAt, updatedAt
+```
+
+### **Presensis**
+```
+- id, userId, geofenceId
+- latitude, longitude, accuracyM
+- distanceM, insideGeofence
+- status (VALID/INVALID/PENDING)
+- statusReason, suspiciousFlag, suspiciousReason
+- buktiFoto, checkIn, checkOut
+- verifiedBy, verifiedAt, verificationNote
+- clientTimestamp, serverTimestamp
+- createdAt, updatedAt
+```
+
+---
+
+## **📱 Halaman Frontend**
+
+| Route | Komponen | Akses | Deskripsi |
+|-------|----------|-------|-----------|
+| `/login` | LoginPage | Public | Form login |
+| `/register` | RegisterPage | Public | Form registrasi |
+| `/dashboard` | DashboardPage | Auth | Dashboard utama |
+| `/presensi` | PresensiPage | Auth | Check-in/out dengan peta & selfie |
+| `/history` | HistoryPage | Auth | Riwayat presensi personal |
+| `/reports` | ReportPage | Admin | Laporan harian |
+| `/admin/geofences` | GeofenceManagementPage | Admin | CRUD geofence dengan peta interaktif |
+| `/admin/presensi` | AdminPresensiPage | Admin | Monitor & verifikasi presensi |
+
+---
+
+## **🔐 Alur Validasi Check-In**
+
+```
+1. User buka halaman Presensi
+2. Browser minta izin lokasi (GPS dengan enableHighAccuracy)
+3. Ambil foto selfie via webcam
+4. Klik Check-In
+   │
+   ├─→ Backend validasi:
+   │   ├─ Cek akurasi GPS ≤ MAX_GPS_ACCURACY_M
+   │   ├─ Ambil geofence aktif
+   │   ├─ Hitung jarak dengan Haversine
+   │   ├─ Deteksi speed anomaly (>200 km/h = spoofing)
+   │   │
+   │   └─→ Tentukan status:
+   │       ├─ VALID: dalam geofence, akurasi OK
+   │       ├─ INVALID: di luar geofence ATAU akurasi buruk
+   │       └─ PENDING: ada flag suspicious
+   │
+5. Response dengan status + jarak + detail
+6. Admin dapat verifikasi presensi PENDING
+```
+
+---
+
+## **📁 Struktur Folder**
+
+```
+PROJECT_Group-2_Geolocation-Camera/
+├── node-server/
+│   ├── config/           # Konfigurasi database
+│   ├── controllers/      # Logic bisnis
+│   ├── middleware/       # Auth & permission
+│   ├── migrations/       # Schema database
+│   ├── models/           # Sequelize models
+│   ├── routes/           # API routes
+│   ├── uploads/          # Foto selfie
+│   ├── utils/            # Helper functions (geolocation)
+│   ├── validators/       # Input validation
+│   ├── .env              # Environment variables
+│   └── server.js         # Entry point
+│
+├── react/
+│   ├── public/           # Static files
+│   ├── src/
+│   │   ├── components/   # React components
+│   │   ├── api.js        # Axios instance
+│   │   ├── App.js        # Routes & layout
+│   │   └── index.js      # Entry point
+│   ├── .env              # Environment variables
+│   └── tailwind.config.js
+│
+└── README.md
+```
+
+---
+
+## **🛠️ Teknologi yang Digunakan**
+
+### **Backend**
+- Node.js + Express.js 5.1
+- Sequelize ORM 6.37
+- MySQL
+- JWT (jsonwebtoken)
+- Multer (file upload)
+- Helmet (security headers)
+- express-rate-limit
+
+### **Frontend**
+- React 19.2 (Create React App)
+- React Router DOM 7
+- React Leaflet 5 (OpenStreetMap)
+- React Webcam 7
+- Tailwind CSS 3
+- Axios
+- jwt-decode
+
+---
+
+## **👥 Anggota Kelompok**
+
+| No | Nama | NIM |
+|----|------|-----|
+| 1 | [Nama Anggota 1] | [NIM] |
+| 2 | [Nama Anggota 2] | [NIM] |
+| 3 | [Nama Anggota 3] | [NIM] |
+
+---
+
+## **📄 Lisensi**
+
+Proyek ini dibuat untuk keperluan pembelajaran mata kuliah Pengembangan Aplikasi Web (PAW).
+
+---
+
+## **🔧 Troubleshooting**
+
+### Database connection error
+```bash
+# Pastikan MySQL berjalan dan kredensial di .env benar
+# Cek port MySQL (default 3306, proyek ini menggunakan 3307)
+```
+
+### CORS error
+```bash
+# Pastikan FRONTEND_ORIGIN di backend .env sesuai dengan URL frontend
+# Contoh: FRONTEND_ORIGIN=http://localhost:3000
+```
+
+### Geofence tidak muncul
+```bash
+# Pastikan sudah membuat dan mengaktifkan geofence via admin
+# Hanya satu geofence yang bisa aktif pada satu waktu
+```
+
+### GPS akurasi rendah
+```bash
+# Gunakan koneksi internet stabil
+# Aktifkan GPS/Location Services di device
+# Browser modern dengan HTTPS lebih akurat
+```
 
