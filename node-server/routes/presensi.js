@@ -1,21 +1,40 @@
-const express = require('express'); // Import express
-const router = express.Router(); // Buat router baru
-const presensiController = require('../controllers/presensiController'); // Import presensiController
-// const { addUserData } = require('../middleware/permisionMiddleware'); // Import middleware untuk menambahkan data user dummy
-const { authenticateToken } = require('../middleware/authMiddleware'); // Import middleware untuk autentikasi JWT
-const { validatePresensiUpdate } = require('../validators/presensi'); // Import validator untuk update presensi
-// router.use(addUserData); // Gunakan middleware untuk menambahkan data user dummy
+const express = require('express');
+const router = express.Router();
+const presensiController = require('../controllers/presensiController');
+const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
+const { validatePresensiUpdate } = require('../validators/presensi');
 
-router.use(authenticateToken); // Gunakan middleware untuk autentikasi JWT
+// All routes require authentication
+router.use(authenticateToken);
 
-// single('buktiFoto') nama field file yang dipakai di FormData React
+// ===== Student Routes =====
+// Get user's own history
+router.get('/history', presensiController.getMyHistory);
+
+// Check-in with photo and location
 router.post(
   '/check-in',
   presensiController.upload.single('buktiFoto'),
   presensiController.CheckIn
-); // Route untuk check-in
-router.post('/check-out', presensiController.CheckOut); // Route untuk check-out
-router.delete('/:id', presensiController.deletePresensi); // Route untuk menghapus data presensi berdasarkan ID
-router.put('/:id', validatePresensiUpdate, presensiController.updatePresensi); // Route untuk memperbarui data presensi dengan validasi
+);
 
-module.exports = router; // Ekspor router untuk digunakan di file lain
+// Check-out
+router.post('/check-out', presensiController.CheckOut);
+
+// Get single presensi by ID (user can only see their own, admin can see all)
+router.get('/:id', presensiController.getPresensiById);
+
+// Delete presensi (user can only delete their own)
+router.delete('/:id', presensiController.deletePresensi);
+
+// Update presensi
+router.put('/:id', validatePresensiUpdate, presensiController.updatePresensi);
+
+// ===== Admin Routes =====
+// Get all attendance records (admin only)
+router.get('/admin/all', requireAdmin, presensiController.getAllPresensi);
+
+// Verify/approve/reject attendance (admin only)
+router.patch('/:id/verify', requireAdmin, presensiController.verifyPresensi);
+
+module.exports = router;
